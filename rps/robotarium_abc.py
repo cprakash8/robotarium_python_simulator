@@ -34,7 +34,7 @@ class RobotariumABC(ABC):
         self.initial_conditions = initial_conditions
 
         # Boundary stuff -> lower left point / width / height
-        self.boundaries = [-1.6, -1, 3.2, 2]
+        self.boundaries = [-0.6, -0.35, 1.2, 0.7]
 
         self.file_path = None
         self.current_file_size = 0
@@ -52,8 +52,8 @@ class RobotariumABC(ABC):
         self.robot_length = 0.095
         self.robot_width = 0.09
 
-        self.collision_offset = 0.025 # May want to increase this
-        self.collision_diameter = 0.135
+        #self.collision_offset = 0.025 # May want to increase this
+        #self.collision_diameter = 0.135
 
 
         self.velocities = np.zeros((2, number_of_robots))
@@ -76,7 +76,38 @@ class RobotariumABC(ABC):
 
         self.figure, self.axes = plt.subplots()
         if(self.show_figure):
-            self.axes.set_axis_off()
+            self.axes.set_axis_on()
+            self.axes.tick_params(axis='both', which='both', reset=True, top=False, right=False)
+            self.axes.spines['top'].set_visible(False)
+            self.axes.spines['right'].set_visible(False)
+
+            self.axes.set_xticks(np.arange(-6, 7)/10)
+            self.axes.set_xlabel("x")
+            self.axes.set_yticks(np.arange(-35, 36, step=5) / 100)
+            self.axes.set_ylabel("y")
+
+            # Draw areas
+
+            # slow down zone
+            self.axes.add_patch(patches.Rectangle([-.3, -.2], .75, .4, edgecolor='None', facecolor=[1, .95, .8]))
+
+            # runway and taxiway for parking
+            rw_x = -.2
+            rw_y = -.05
+            rw_w = .3
+            rw_h = .1
+            pkw_w = 0.2
+            self.axes.add_patch(patches.Rectangle([rw_x, rw_y], rw_w, rw_h, edgecolor='None', facecolor=[.86, .86, .86]))
+            self.axes.add_patch(patches.Rectangle([rw_x + rw_w, rw_y], pkw_w, rw_h, edgecolor='None', facecolor=[.7, 1, .7]))
+
+            # no fly zone
+            self.axes.add_patch(patches.Rectangle([rw_x, rw_y + rw_h], rw_w + pkw_w, rw_h / 2, edgecolor='None', facecolor=[1, .35, .35]))
+            self.axes.add_patch(patches.Rectangle([rw_x, rw_y - rw_h / 2], rw_w + pkw_w, rw_h / 2, edgecolor='None', facecolor=[1, .35, .35]))
+            self.axes.add_patch(patches.Rectangle([rw_x + rw_w + pkw_w, rw_y - rw_h / 2], rw_h / 2, rw_h * 2, edgecolor='None', facecolor=[1, .35, .35]))
+
+            # parking positions
+            plt.plot(rw_x + rw_w, 0, "k*", rw_x + rw_w + .1, 0, "k*", rw_x + rw_w + .2, 0, "k*")
+
             for i in range(number_of_robots):
                 # p = patches.RegularPolygon((self.poses[:2, i]), 4, math.sqrt(2)*self.robot_radius, self.poses[2,i]+math.pi/4, facecolor='#FFD700', edgecolor = 'k')
                 p = patches.Rectangle((self.poses[:2, i]+self.robot_length/2*np.array((np.cos(self.poses[2, i]+math.pi/2), np.sin(self.poses[2, i]+math.pi/2)))+\
@@ -115,15 +146,16 @@ class RobotariumABC(ABC):
                 # self.axes.add_patch(base)
 
             # Draw arena
-            self.boundary_patch = self.axes.add_patch(patches.Rectangle(self.boundaries[:2], self.boundaries[2], self.boundaries[3], fill=False))
+            self.boundary_patch = self.axes.add_patch(patches.Rectangle(self.boundaries[:2], self.boundaries[2], self.boundaries[3], fill=False, linewidth=3))
 
-            self.axes.set_xlim(self.boundaries[0]-0.1, self.boundaries[0]+self.boundaries[2]+0.1)
-            self.axes.set_ylim(self.boundaries[1]-0.1, self.boundaries[1]+self.boundaries[3]+0.1)
+            self.axes.set_xlim(self.boundaries[0]-0.05, self.boundaries[0]+self.boundaries[2]+0.05)
+            self.axes.set_ylim(self.boundaries[1]-0.05, self.boundaries[1]+self.boundaries[3]+0.05)
 
+            self.axes.grid(True, alpha=0.2)
             plt.ion()
             plt.show()
 
-            plt.subplots_adjust(left=-0.03, right=1.03, bottom=-0.03, top=1.03, wspace=0, hspace=0)
+            #plt.subplots_adjust(left=-0.03, right=1.03, bottom=-0.03, top=1.03, wspace=0, hspace=0)
         else:
             self.figure.set_visible(False)
             plt.draw()
@@ -195,10 +227,10 @@ class RobotariumABC(ABC):
 
         for j in range(N-1):
             for k in range(j+1,N):
-                first_position = p[:2, j] + self.collision_offset*np.array([np.cos(p[2,j]), np.sin(p[2, j])])
-                second_position = p[:2, k] + self.collision_offset*np.array([np.cos(p[2,k]), np.sin(p[2, k])])
-                if(np.linalg.norm(first_position - second_position) <= (self.collision_diameter)):
-                # if (np.linalg.norm(p[:2,j]-p[:2,k]) <= self.robot_diameter):
+                # first_position = p[:2, j] + self.collision_offset*np.array([np.cos(p[2,j]), np.sin(p[2, j])])
+                # second_position = p[:2, k] + self.collision_offset*np.array([np.cos(p[2,k]), np.sin(p[2, k])])
+                # if(np.linalg.norm(first_position - second_position) <= (self.collision_diameter)):
+                if (np.linalg.norm(p[:2,j]-p[:2,k]) <= self.robot_diameter):
                     if "collision" in errors:
                         if j in errors["collision"]:
                             errors["collision"][j] += 1
